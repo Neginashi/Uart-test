@@ -7,8 +7,8 @@ module UART_RX(
 
 	output	reg	[7:0]	RX_OUT,
 	output	reg			DONE,
-	output	reg			BUSY,
-	output	reg			ERR
+	output	reg			BUSY
+	//output	reg			ERR
 	);
 
 	parameter CLK_F 	= 50000000;
@@ -29,7 +29,7 @@ module UART_RX(
 
 	initial begin
 		RX_OUT	<= 8'b0;
-		ERR		<= 1'b0;
+		//ERR		<= 1'b0;
 		DONE	<= 1'b0;
 		BUSY	<= 1'b0;
 	end
@@ -39,71 +39,71 @@ module UART_RX(
 		if (!RX_EN) begin
 			STATE <= RESET;
 		end
-
-		case (STATE)
-			RESET: begin
-				RX_OUT		<= 8'b0;
-				ERR			<= 1'b0;
-				DONE		<= 1'b0;
-				BUSY		<= 1'b0;
-				BIT_IDX		<= 3'b0;
-				CLK_COUNT	<= 9'b0;
-				DATA_RX		<= 8'b0;
-				if (RX_EN) begin
-					STATE	<= IDLE;
-				end
-			end
-
-			IDLE: begin
-				DONE <= 1'b0;
-				if (CLK_COUNT == B_CNT - 1) begin
-					STATE		<= DATA_BITS;
-					RX_OUT			<= 8'b0;
+		else begin
+			case (STATE)
+				RESET: begin
+					RX_OUT		<= 8'b0;
+					//ERR			<= 1'b0;
+					DONE		<= 1'b0;
+					BUSY		<= 1'b0;
 					BIT_IDX		<= 3'b0;
 					CLK_COUNT	<= 9'b0;
 					DATA_RX		<= 8'b0;
-					BUSY		<= 1'b1;
-					ERR			<= 1'b0;
-				end
-				else if (&INPUT_SW) begin
-					ERR		<= 1'b1;
-					STATE	<= RESET;
-				end
-				CLK_COUNT	<= CLK_COUNT + 1;
-			end
-
-			DATA_BITS: begin
-				if (CLK_COUNT == B_CNT - 1) begin
-					CLK_COUNT <= 9'b0;
-				end
-				else begin
-					if (BIT_IDX <= 3'b111) begin
-						DATA_RX[BIT_IDX]	<= INPUT_SW[0];
-						BIT_IDX				<= BIT_IDX + 3'b1;
+					if (RX_EN) begin
+						STATE	<= IDLE;
 					end
-					else if (&BIT_IDX) begin
+				end
+
+				IDLE: begin
+					DONE <= 1'b0;
+					if (INPUT_SW == 2'b10) begin
+						STATE		<= DATA_BITS;
+						RX_OUT		<= 8'b0;
 						BIT_IDX		<= 3'b0;
-						STATE		<= STOP_BIT;
+						CLK_COUNT	<= 9'b0;
+						DATA_RX		<= 8'b0;
+						BUSY		<= 1'b1;
+						//ERR			<= 1'b0;
 					end
-					CLK_COUNT	<= CLK_COUNT + 9'b1;
+					else begin
+						//CLK_COUNT	<= CLK_COUNT + 1;
+						STATE	<= IDLE;
+					end
 				end
-			end
 
-			STOP_BIT: begin
-				if (CLK_COUNT <= B_CNT - 1) begin
-					STATE		<= IDLE;
-					DONE		<= 1'b1;
-					BUSY		<= 1'b0;
-					RX_OUT		<= DATA_RX;
-					CLK_COUNT	<= 9'b0;
+				DATA_BITS: begin
+					if (CLK_COUNT == 9'b1111) begin
+						CLK_COUNT <= 9'b0;
+					end
+					else begin
+						if (BIT_IDX <= 3'b111) begin
+							DATA_RX[3'b111-BIT_IDX]	<= RX_IN;
+							BIT_IDX				<= BIT_IDX + 3'b1;
+							CLK_COUNT			<= CLK_COUNT + 9'b1;
+							if (BIT_IDX == 3'b111) begin
+								BIT_IDX	<= 3'b0;
+								STATE	<= STOP_BIT;
+							end
+						end
+					end
 				end
-				else begin
-					CLK_COUNT	<= CLK_COUNT + 9'b1;
-				end
-			end
 
-			default: STATE <= IDLE;
-		endcase
+				STOP_BIT: begin
+					if (CLK_COUNT == 9'b1111) begin
+						STATE		<= IDLE;
+						DONE		<= 1'b1;
+						BUSY		<= 1'b0;
+						RX_OUT		<= DATA_RX;
+						CLK_COUNT	<= 9'b0;
+					end
+					else begin
+						CLK_COUNT	<= CLK_COUNT + 9'b1;
+					end
+				end
+
+				default: STATE <= IDLE;
+			endcase
+		end	
 	end
 
 endmodule
