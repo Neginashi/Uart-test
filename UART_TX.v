@@ -1,12 +1,14 @@
+`timescale 1ns / 1ps
+
 module UART_TX (
     input  wire         CLK,
     input  wire         TX_EN,
     input  wire         START,
     input  wire [7:0]   TX_IN,
-    output reg          TX_OUT,
+    output reg          OUT,
     output reg          DONE,
     output reg          BUSY
-);
+    );
 
     reg [2:0]   STATE   = 3'b001;
     reg [7:0]   DATA_TX = 8'b0;
@@ -28,7 +30,7 @@ module UART_TX (
             end
             
             IDLE: begin
-                TX_OUT  <= 1'b1;
+                OUT     <= 1'b1;
                 DONE    <= 1'b0;
                 BUSY    <= 1'b0;
                 BIT_IDX <= 3'b0;
@@ -40,13 +42,13 @@ module UART_TX (
             end
             
             START_BIT: begin
-                TX_OUT  <= 1'b0;
+                OUT     <= 1'b0;
                 BUSY    <= 1'b1;
                 STATE   <= DATA_BITS;
             end
             
             DATA_BITS: begin
-                TX_OUT     <= DATA_TX[BIT_IDX];
+                OUT     <= DATA_TX[BIT_IDX];
                 if (&BIT_IDX) begin
                     BIT_IDX <= 3'b0;
                     STATE   <= STOP_BIT;
@@ -58,7 +60,7 @@ module UART_TX (
             
             STOP_BIT: begin
                 DONE    <= 1'b1;
-                DATA_TX <= 8'b0;
+                DATA_TX    <= 8'b0;
                 STATE   <= IDLE;
             end
         endcase
