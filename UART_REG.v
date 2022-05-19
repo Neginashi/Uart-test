@@ -1,3 +1,5 @@
+`timescale 1ns / 1ps
+
 module UART_REG(
 	input 				CLK,
 	input 				STATE_R,
@@ -6,48 +8,42 @@ module UART_REG(
 	input 	 	[31:0]	DATA_IN,
 	input 				STATE_FAIL,
 
-	output 	 	[7:0]	OUT
+	output reg 	[31:0]	DATA_OUT,
+	output reg			STATE_R_OUT,
+	output reg 			FAIL_OUT,
+	output reg 			OK
 	);
-
-	reg [31:0]	FAIL 		= 32'h4641_494C;
-	reg [15:0] 	OK			= 16'h4F4B;
-	reg [2:0] 	COUNT_DATA 	= 3'b0;
-	reg [1:0] 	COUNT_FAIL 	= 2'b0;
-	reg 	 	COUNT_OK 	= 1'b0;
 
 	reg [7:0] 	REGISTER [31:0];
 
+	initial begin
+		STATE_R 	<= 1'b0;
+		STATE_W 	<= 1'b0;
+		ADDR 		<= 16'h0;
+		DATA_IN 	<= 1'b0;
+		STATE_FAIL 	<= 1'b0;
+		FAIL_OUT	<= 1'b0;
+		STATE_R_OUT <= 1'b0;
+	end
 
 	always @(posedge CLK) begin
-		if (!STATE_FAIL) begin
+		if (STATE_FAIL) begin
+			FAIL_OUT 	<= 1'b1;
+			OK 			<= 1'b0;
+			STATE_R_OUT <= 1'b0;
+		end
+		else begin
 			if (STATE_W) begin
-				REGISTER[ADDR] <= DATA_IN;
-				if (COUNT_OK <= 1'd1) begin
-					OUT 		<= OK[7:0];
-					OK 			<= OK >> 8;
-					COUNT_OK 	<= COUNT_OK + 1'b1;
-				end
-				else begin
-					OK 			<= 16'h4F4B;
-					COUNT_OK 	<= 1'b0;
-				end
+				REGISTER[ADDR] 	<= DATA_IN;
+				FAIL_OUT 		<= 1'b0;
+				OK				<= 1'b1;
+				STATE_R_OUT <= 1'b0;
 			end
 			else if (STATE_R) begin
-				if (COUNT_DATA <= 3'd7) begin
-					
-				end
-				OUT <= REGISTER[ADDR];
-			end
-		end
-		else if (STATE_FAIL) begin
-			if (COUNT_FAIL <= 2'd3) begin
-				OUT 		<= FAIL[7:0];
-				FAIL 		<= FAIL >> 8;
-				COUNT_FAIL 	<= COUNT_FAIL + 2'b1;
-			end
-			else begin
-				FAIL 		<= 32'h4641_494C;
-				COUNT_FAIL 	<= 2'b0;
+				DATA_OUT 	<= REGISTER[ADDR];
+				FAIL_OUT	<= 1'b0;
+				OK			<= 1'b1;
+				STATE_R_OUT <= 1'b1;
 			end
 		end
 	end
