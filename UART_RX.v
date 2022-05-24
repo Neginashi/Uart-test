@@ -13,18 +13,18 @@ module UART_RX(
 
 	parameter CLK_F 	= 50000000;
 	parameter UART_B 	= 115200;
-	parameter B_CNT 	= CLK_F / UART_B;
+	parameter B_CNT 	= CLK_F / UART_B; //433
 
 	// STATEs of STATE machine
-	reg [1:0]	RESET		= 2'b00;
-	reg [1:0]	IDLE		= 2'b01;
-	reg [1:0]	DATA_BITS	= 2'b10;
-	reg [1:0]	STOP_BIT	= 2'b11;
+	parameter	RESET		= 2'b00;
+	parameter	IDLE		= 2'b01;
+	parameter	DATA_BITS	= 2'b10;
+	parameter	STOP_BIT	= 2'b11;
 
-	reg [2:0]	STATE;
-	reg [2:0]	BIT_IDX		= 3'b0;
+	reg [1:0]	STATE		= 2'b0;
+	reg [3:0]	BIT_IDX		= 4'b0;
 	reg [1:0]	INPUT_SW	= 2'b0;
-	reg [3:0]	CLK_COUNT	= 9'b0;
+	reg [8:0]	CLK_COUNT	= 9'b0;
 	reg [7:0]	DATA_RX		= 8'b0;
 
 	initial begin
@@ -46,7 +46,7 @@ module UART_RX(
 					//ERR			<= 1'b0;
 					DONE		<= 1'b0;
 					BUSY		<= 1'b0;
-					BIT_IDX		<= 3'b0;
+					BIT_IDX		<= 4'b0;
 					CLK_COUNT	<= 9'b0;
 					DATA_RX		<= 8'b0;
 					if (RX_EN) begin
@@ -59,7 +59,7 @@ module UART_RX(
 					if (INPUT_SW == 2'b10) begin
 						STATE		<= DATA_BITS;
 						RX_OUT		<= 8'b0;
-						BIT_IDX		<= 3'b0;
+						BIT_IDX		<= 4'b0;
 						CLK_COUNT	<= 9'b0;
 						DATA_RX		<= 8'b0;
 						BUSY		<= 1'b1;
@@ -72,33 +72,28 @@ module UART_RX(
 				end
 
 				DATA_BITS: begin
-					if (CLK_COUNT == 9'b1111) begin
-						CLK_COUNT <= 9'b0;
-					end
-					else begin
-						if (BIT_IDX <= 3'b111) begin
-							DATA_RX[3'b111-BIT_IDX]	<= RX_IN;
-							BIT_IDX				<= BIT_IDX + 3'b1;
-							CLK_COUNT			<= CLK_COUNT + 9'b1;
-							if (BIT_IDX == 3'b111) begin
-								BIT_IDX	<= 3'b0;
-								STATE	<= STOP_BIT;
+					if (BIT_IDX <= 4'b1000) begin
+						if (CLK_COUNT <= 9'b1_1011_0001) begin
+							CLK_COUNT <= CLK_COUNT + 9'b1;
+							if (CLK_COUNT == 9'b1_1011_0001) begin
+								DATA_RX[4'b111 - BIT_IDX] 	<= RX_IN;
+								CLK_COUNT 					<= 9'b0;
+								BIT_IDX						<= BIT_IDX + 4'b1;
+								if (BIT_IDX == 4'b1000) begin
+									BIT_IDX	<= 4'b0;
+									STATE	<= STOP_BIT;
+								end
 							end
 						end
 					end
 				end
 
 				STOP_BIT: begin
-					if (CLK_COUNT == 9'b1111) begin
 						STATE		<= IDLE;
 						DONE		<= 1'b1;
 						BUSY		<= 1'b0;
 						RX_OUT		<= DATA_RX;
 						CLK_COUNT	<= 9'b0;
-					end
-					else begin
-						CLK_COUNT	<= CLK_COUNT + 9'b1;
-					end
 				end
 
 				default: STATE <= IDLE;
