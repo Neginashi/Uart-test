@@ -1,14 +1,14 @@
 `timescale 1ns / 1ps
 
 module UART_DEC (
-	input 			CLK,
-	input 			DATA_EN,
-	input 			STATE_R_IN,
-	input 			STATE_W_IN,
-	input  [15:0]	ADDR_IN,
-	input  [63:0]	DATA_IN,
-	input 			FAIL_IN,
-	input 			START,
+	input wire			CLK,
+	input wire			RST,
+	input wire			STATE_R_IN,
+	input wire			STATE_W_IN,
+	input wire [15:0]	ADDR_IN,
+	input wire [63:0]	DATA_IN,
+	input wire			FAIL_IN,
+	input wire			START,
 
 	output 	reg			STATE_R_OUT,
 	output 	reg			STATE_W_OUT,
@@ -29,24 +29,10 @@ module UART_DEC (
 	parameter FAIL 			= 3'b100;
 	parameter STOP 			= 3'b101;
 
-
-	initial begin
-		STATE_R_OUT 	<= 1'b0;
-		STATE_W_OUT 	<= 1'b0;
-		ADDR_OUT	 	<= 8'h0;
-		DATA_OUT	 	<= 32'h0;
-		FAIL_OUT 		<= 1'b0;
-		STATE 			<= IDLE;
-		DONE 			<= 1'b0;
-		STATE_BUF 		<= 3'b0;
-		DATA_BUF 		<= 64'b0;
-		ADDR_BUF 		<= 16'b0;
-	end
-
-
-	always @(posedge CLK) begin
-		if (!DATA_EN) begin
-			STATE <= IDLE;
+	always @(posedge CLK or posedge RST) begin
+		if (RST) begin
+			// reset
+			STATE 			<= IDLE;
 			STATE_R_OUT 	<= 1'b0;
 			STATE_W_OUT 	<= 1'b0;
 			ADDR_OUT	 	<= 8'h0;
