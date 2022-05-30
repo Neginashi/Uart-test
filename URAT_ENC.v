@@ -1,16 +1,16 @@
 `timescale 1ns / 1ps
 
 module UART_ENC(
-	input 			CLK,
-	input 			DATA_EN,
-	input 	[31:0]	DATA_IN,
-	input 			FAIL,
-	input 			OK,
-	input			STATE_R,
-	input 			START,
+	input wire			CLK,
+	input wire			RST,
+	input wire 	[31:0]	DATA_IN,
+	input wire			FAIL,
+	input wire			OK,
+	input wire			STATE_R,
+	input wire			START,
 
 
-	output reg [79:0]	DATA_OUT,
+	output reg 	[79:0]	DATA_OUT,
 	output reg			FAIL_OUT,
 	output reg			OK_OUT,
 	output reg			STATE_R_OUT,
@@ -19,6 +19,7 @@ module UART_ENC(
 	
 	reg [2:0] 	STATE;
 	reg [31:0] 	DATA_BUF;
+	//reg 		BEGIN;
 	
 	parameter IDLE 			= 3'b001;
 	parameter STATE_DATA 	= 3'b010;
@@ -26,17 +27,28 @@ module UART_ENC(
 	parameter STATE_OK 		= 3'b100;
 	parameter STOP 			= 3'b101;
 
-	initial begin
-		DATA_OUT 	<= 80'b0;
-		FAIL_OUT	<= 1'b0;
-		OK_OUT 		<= 1'b0;
-		STATE_R_OUT <= 1'b0;
-		STATE 		<= 3'b001;
-		DATA_BUF 	<= 32'b0;
+	always @(posedge CLK or posedge RST) begin
+		if (RST) begin
+			// reset
+			DATA_BUF 	<= 32'b0;
+			//BEGIN 		<= 1'b0;
+		end
+		else if (START) begin
+			DATA_BUF 	<= DATA_IN;
+			//BEGIN 		<= 1'b1;
+		end
+		else if (DONE) begin
+			DATA_BUF 	<= 32'b0;
+			//BEGIN 		<= 1'b0;
+		end
+		else begin
+			DATA_BUF 	<= DATA_BUF;
+		end
 	end
 
-	always @(posedge CLK) begin
-		if (!DATA_EN) begin
+	always @(posedge CLK or posedge RST) begin
+		if (RST) begin
+			// reset
 			STATE 		<= IDLE;
 			DATA_OUT 	<= 80'b0;
 			FAIL_OUT	<= 1'b0;
@@ -44,31 +56,26 @@ module UART_ENC(
 			STATE_R_OUT <= 1'b0;
 			STATE 		<= 3'b001;
 			DONE 		<= 1'b0;
-			DATA_BUF 	<= 32'b0;
 		end
 		else begin
 			case (STATE)
 				IDLE: begin
-					if (START) begin
-						DATA_BUF <= DATA_IN;
-						if (STATE_R) begin
-							STATE <= STATE_DATA;
-						end
-						else if (OK) begin
-							STATE <= STATE_OK;
-						end
-						else if (FAIL) begin
-							STATE <= STATE_FAIL;
-						end
-						else begin
-							STATE <= IDLE;
-							DATA_OUT 	<= 80'b0;
-							FAIL_OUT	<= 1'b0;
-							OK_OUT 		<= 1'b0;
-							STATE_R_OUT <= 1'b0;
-							DONE 		<= 1'b0;
-							DATA_BUF 	<= 32'b0;
-						end
+					if (STATE_R) begin
+						STATE <= STATE_DATA;
+					end
+					else if (OK) begin
+						STATE <= STATE_OK;
+					end
+					else if (FAIL) begin
+						STATE <= STATE_FAIL;
+					end
+					else begin
+						STATE 		<= IDLE;
+						DATA_OUT 	<= 80'b0;
+						FAIL_OUT	<= 1'b0;
+						OK_OUT 		<= 1'b0;
+						STATE_R_OUT <= 1'b0;
+						DONE 		<= 1'b0;
 					end
 				end
 
@@ -252,7 +259,6 @@ module UART_ENC(
 					OK_OUT 		<= 1'b0;
 					STATE_R_OUT <= 1'b0;
 					DONE 		<= 1'b0;
-					DATA_BUF 	<= 32'b0;
 				end
 
 				default: begin
