@@ -1,14 +1,14 @@
 `timescale 1ns / 1ps
 
 module UART_REG(
-	input 				CLK,
-	input				DATA_EN,
-	input 				STATE_R,
-	input 				STATE_W,
-	input		[7:0]	ADDR,
-	input 	 	[31:0]	DATA_IN,
-	input 				STATE_FAIL,
-	input 				START,
+	input wire			CLK,
+	input wire			RST,
+	input wire			STATE_R,
+	input wire			STATE_W,
+	input wire 	[7:0]	ADDR,
+	input wire 	[31:0]	DATA_IN,
+	input wire			STATE_FAIL,
+	input wire			START,
 
 	output reg 	[31:0]	DATA_OUT,
 	output reg			STATE_R_OUT,
@@ -28,20 +28,10 @@ module UART_REG(
 	parameter FAIL 	= 3'b100;
 	parameter STOP 	= 3'b101;
 
-	initial begin
-		DATA_OUT 	<= 1'b0;
-		OK 			<= 1'b0;
-		FAIL_OUT	<= 1'b0;
-		STATE_R_OUT <= 1'b0;
-		ADDR_BUF 	<= 8'b0;
-		DATA_BUF 	<= 32'b0;
-		STATE 		<= 3'b001;
-		DONE 		<= 1'b0;
-	end
-
-	always @(posedge CLK) begin
-		if (!DATA_EN) begin
-			STATE <= IDLE;
+	always @(posedge CLK or posedge RST) begin
+		if (RST) begin
+			// reset
+			STATE 		<= IDLE;
 			DATA_OUT 	<= 1'b0;
 			OK 			<= 1'b0;
 			FAIL_OUT	<= 1'b0;
@@ -79,16 +69,16 @@ module UART_REG(
 				end
 
 				READ: begin
-					DATA_OUT 	<= REGISTER[ADDR];
+					DATA_OUT 	<= REGISTER[ADDR_BUF];
 					FAIL_OUT	<= 1'b0;
-					OK			<= 1'b1;
+					OK			<= 1'b0;
 					STATE_R_OUT <= 1'b1;
 					DONE 		<= 1'b1;
 					STATE 		<= STOP;
 				end
 
 				WRITE: begin
-					REGISTER[ADDR] 	<= DATA_BUF;
+					REGISTER[ADDR_BUF] 	<= DATA_BUF;
 					FAIL_OUT 		<= 1'b0;
 					OK				<= 1'b1;
 					STATE_R_OUT 	<= 1'b0;
