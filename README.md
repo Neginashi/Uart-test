@@ -5,9 +5,7 @@ WRITE:
 
 input: W XX YYYYYYYY ( XX: address, YY: data, X = 1'h0~1'hA, Y = 1'h0~1'hA )
 
-output: OK ( no errors in the format )
-
-        FAIL ( errors in the format )
+output: OK ( no errors in the format ) FAIL ( errors in the format )
         
         
 READ:
